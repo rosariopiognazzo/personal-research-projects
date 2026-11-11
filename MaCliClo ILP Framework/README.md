@@ -5,8 +5,6 @@
 Rosario Pio Gnazzo, Department of Computer Science, University of Salerno
 ([rosariopiognazzo@gmail.com](mailto:rosariopiognazzo@gmail.com))
 
-*Italiano: vedi [README.it.md](README.it.md)*
-
 ---
 
 ## Overview
