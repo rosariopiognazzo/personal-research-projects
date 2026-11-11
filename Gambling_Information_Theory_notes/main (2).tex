@@ -1,0 +1,106 @@
+\documentclass{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{amsmath}
+\usepackage{amsfonts}
+
+\title{Gambling using Information Theory}
+\author{Rosario Pio Gnazzo}
+
+\begin{document}
+
+\maketitle
+\noindent Let be
+\begin{enumerate}
+    \item $T$ is the player's capital
+    \item $m$ number of horses $\{1, 2, \dots, m\}$
+    \item $p_i$ is the probability that the i-th horse wins the race. Distribution of the win probability $\mathbf{p} = \{p_1, p_2, \dots, p_m\}$
+    \item $o_i$ is the odds that the agency gives to the i-th horse winning the race. Distribution of the odds $\mathbf{o} = \{o_1, o_2, \dots, o_m\}$
+    \item $b_i$ is the fraction of the capital that the player bets on the i-th horse. The player's strategy is identified by the vector $\mathbf{b} = \{b_1, b_2, \dots, b_m\}$ with $b_i\ge 0$ and $\sum_{i=1}^{m}b_i = 1$
+\end{enumerate}
+If the i-th horse wins, the player collects
+\begin{equation}
+    o_i b_iT
+\end{equation}
+where $o_ib_i$ is the multiplicative factor of the capital $T$.
+After each race, the multiplicative factor aggregates over time, so it is precisely this aggregation of the multiplicative factors over time that tells us how the capital will move over time.
+
+With $X_j$ we denote the random variable describing the outcome of the j-th race, that is, one of the horses. The $X_1, X_2, \dots, X_k$ are iid. We represent the multiplicative factor of the capital $T$ that multiplies it after the j-th race
+\begin{equation}
+s(X_j) = 
+    \begin{pmatrix}
+    o_1b_1 & o_2b_2 & \dots & o_mb_m \\
+    p_1 & p_2 & \dots & p_m
+\end{pmatrix}
+\end{equation}
+After $n$ races, under the assumption that the whole capital is bet at each race, the growth rate of the capital depends on the function:
+\begin{equation}
+    S_n = \prod_{j = 1}^{n}s(X_j)\cdot T
+\end{equation}
+The goal is therefore to maximize the function $S_n = \prod_{j = 1}^{n}s(X_j)$; for simplicity we consider the logarithmic version
+\begin{equation}
+    \log S_n = \sum_{j = 1}^{n}\log s(X_j)
+\end{equation}
+so we can reconstruct the random variable describing how the capital varies after the $j$-th race as
+\begin{equation}
+\log s(X_j) = 
+    \begin{pmatrix}
+    \log o_1b_1 & \log o_2b_2 & \dots & \log o_mb_m \\
+    p_1 & p_2 & \dots & p_m
+\end{pmatrix}
+\end{equation}
+The expected value of this random variable is
+\begin{equation}
+    \mathbb{E}\log s(X_j) = \sum_{k=1}^{m}p_k\log o_k b_k \equiv W(\mathbf{p}, \mathbf{b}, \mathbf{o})
+\end{equation}
+For formality, in this case the expected value function is denoted as $W(\mathbf{p}, \mathbf{b}, \mathbf{o})$. \\
+By the weak law of large numbers it holds that 
+]\begin{equation}
+    \dfrac{1}{n}\sum_{i = 1}^{n} \log s(X_j)\quad \overrightarrow{n\rightarrow \infty}\quad \mathbb{E}\log s(X_j) = \sum_{k=1}^{m}p_k\log o_k b_k \equiv W(\mathbf{p}, \mathbf{b}, \mathbf{o})
+\end{equation}
+so the following relation holds
+\begin{equation}
+    S_n \quad \overrightarrow{n\rightarrow \infty}\quad 2^{nW(\mathbf{p}, \mathbf{b}, \mathbf{o})}
+\end{equation}
+Therefore, maximizing $S_n$ means maximizing $W(\mathbf{p}, \mathbf{b}, \mathbf{o})$, that is
+\begin{equation}
+    \max: \sum_{k=1}^{m}p_k\log o_k b_k
+\end{equation}
+Studying this optimization problem, one obtains that
+\begin{equation}
+    W(\mathbf{p}, \mathbf{b}, \mathbf{o}) = \sum_{k=1}^{m}p_k\log o_k\ - \ H(\mathbf{p})\ - D(\mathbf{p}||\mathbf{b})
+\end{equation}
+Therefore the function attains its maximum value when the information divergence $D(\mathbf{p}||\mathbf{b}) = 0$, that is, when $\mathbf{p} = \mathbf{b}$.
+So the player's optimal case is
+\begin{equation}
+    S_n \approx 2^{n(\sum_{k=1}^{m}p_k \log o_k - H(\mathbf{p}))}
+\end{equation}
+It holds that in the case of fair play, that is, where the agency pays proportionally to the horse's probability of winning, we have
+\begin{equation}
+    S_n \approx 2^{D(\mathbf{p}||\mathbf{r}) - D(\mathbf{p}||\mathbf{b})}
+\end{equation}
+therefore
+\begin{itemize}
+    \item if $D(\mathbf{p}||\mathbf{r}) > D(\mathbf{p}||\mathbf{b})$, that is, our estimate of $\mathbf{p}$ is closer to the horses' win probabilities than the agency's estimate $\mathbf{r}$.
+    \item if $D(\mathbf{p}||\mathbf{r}) < D(\mathbf{p}||\mathbf{b})$, that is, our estimate of $\mathbf{p}$ is farther from the horses' win probabilities than the agency's estimate $\mathbf{r}$.
+\end{itemize}
+\begin{center}
+    \textbf{Question}: how does $S_n$ change if the player has auxiliary information on $X_j$ described by a random variable $Y$?
+\end{center}
+As a metric we use the information divergence between the joint random variable $XY$ and the product of the random variables $X$ and $Y$. This is because we need it to understand whether the two random variables are correlated or not. 
+\begin{equation}
+    D(p(\mathbf{xy})||p(\mathbf{x})p(\mathbf{y})) = H(\mathbf{x}) - \sum_{y}p(\mathbf{y})\sum_{x}p(\mathbf{x|\mathbf{y}})\dfrac{1}{p(\mathbf{x}|\mathbf{y})} = H(X) - H(X|Y) 
+\end{equation}
+This quantity is called Mutual information and we denote it by
+\begin{equation}
+    \mathbb{I}(X, Y) = H(X) - H(X|Y) \ge 0
+\end{equation}
+Under the dependence of $X$ on $Y$, the multiplicative factor of the capital becomes
+\begin{equation}
+    S_n = \prod_{k=1}^{n}\mathbf{b}(X_k|Y_k)\mathbf{o}(X_k)
+\end{equation}
+At the optimum for the player, the capital grows as 
+\begin{equation}
+    S_n \approx 2^{n(W(\mathbf{b}(x|y),\ p(\mathbf{xy}),\ \mathbf{o})\ +\ \mathbb{I}(X, Y))}
+\end{equation}
+Therefore the growth of the capital under additional information, compared to not having it, depends exclusively on how much additional information $Y$ carries about $X$, that is, $\mathbb{I}(X,Y)$. The mutual information therefore tells us by how much the capital grows compared to knowing nothing. 
+\end{document}
