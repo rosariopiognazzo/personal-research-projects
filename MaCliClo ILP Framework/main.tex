@@ -1,0 +1,191 @@
+\documentclass[10pt]{article} % For LaTeX2e
+%\usepackage{tmlr}
+% If accepted, instead use the following line for the camera-ready submission:
+%\usepackage[accepted]{tmlr}
+% To de-anonymize and remove mentions to TMLR (for example for posting to preprint servers), instead use the following:
+\usepackage[preprint]{tmlr}
+
+% Optional math commands from https://github.com/goodfeli/dlbook_notation.
+\input{math_commands.tex}
+
+\usepackage{hyperref}
+\usepackage{url}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+
+\title{MaCliCo Framework}
+% [Eng] A formal methodology for the Reliability of Neural Networks
+% Authors must not appear in the submitted version. They should be hidden
+% as long as the tmlr package is used without the [accepted] or [preprint] options.
+% Non-anonymous submissions will be rejected without review.
+
+\author{\name Rosario Pio Gnazzo \email rosariopiognazzo@gmail.com \\
+      \addr Department of Computer Science\\
+      University of Salerno}
+
+% The \author macro works with any number of authors. Use \AND 
+% to separate the names and addresses of multiple authors.
+
+\newcommand{\fix}{\marginpar{FIX}}
+\newcommand{\new}{\marginpar{NEW}}
+
+\def\month{05}  % Insert correct month for camera-ready version
+\def\year{2026} % Insert correct year for camera-ready version
+\def\openreview{\url{https://openreview.net/forum?id=XXXX}} % Insert correct link to OpenReview for camera-ready version
+
+
+\begin{document}
+
+
+\maketitle
+
+\begin{abstract}
+\textcolor{blue}{MaCliCo} (Hypergraph Construction via \textcolor{blue}{Ma}ximal \textcolor{blue}{Cli}que based Set \textcolor{blue}{Co}vering), an integer linear programming framework that generalizes a weighted graph into a hypergraph. The goal is to capture the topological relationships among nodes by covering all vertices with as few hyperedges as possible, while keeping the construction robust: no node should appear in too many hyperedges, and each hyperedge should be internally cohesive. \textcolor{blue}{MaCliCo} proceeds in three sequential steps. First, all maximal cliques of the input graph are enumerated using the Bron--Kerbosch algorithm, in its pivoting and degeneracy-ordering variants. Second, each clique is assigned a normalized cohesion score computed from the weights of its internal edges. Third, a set-cover variant selects the subset of cliques that covers every vertex, jointly penalizing the maximum node redundancy and the number of selected cliques, and rewarding the total internal cohesion. The three objectives are controlled by tunable parameters $(\alpha, \beta, \gamma)$. We derive sufficient conditions on these parameters that enforce a lexicographic priority among the objectives, such as redundancy first, then number of hyperedges, then cohesion, or alternatively number of hyperedges first, and provide closed-form choices that guarantee the desired behavior. The selected cliques form the hyperedges of the resulting hypergraph.
+\end{abstract}
+
+\section{Introduction}
+\label{framework}
+Let be $G=\{V,E_{g}\}$ a graph and $H = \{V, E_{h}\}$ a hypergraph where $V=\{v_1, v_2,\dots,v_n\}$ is the set of vertex $v_{i}$ and $E_{h} = \{e_{1}, e_{2}, \dots, e_{m}\}$ is the set of hyperedges $e_{j}$ such that $e_{j} \subseteq V$, while $E_{g} = \{(v_{i}, v_{j}): \ v_{i}, v_{j}\in V\ \text{con}\ i\not = j\}$ is the set of edge between pair of nodes of $V$.\\
+\textcolor{blue}{MaCliCo} (Hypergraph Construction via \textcolor{blue}{Ma}ximal \textcolor{blue}{Cli}que based Set \textcolor{blue}{Co}vering.) is a PLI framework that takes in input the weighted graph $(G)$ and return in output its generalization as hypergraph $(H)$ minimizing\textit{ maximum redundancy}
+\footnote{Given an hypergraph $H = \{V, E\}$, where $V=\{v_1, v_2,\dots,v_n\}$ is the set of vertex $v_{i}$ and $E = \{e_{1}, e_{2}, \dots, e_{m}\}$ is the set of hyperedges $e_{j}$. Each $v_{i}$ can be present in multiple hyperedges $e_{j}$, so if $|v_{i}|$ is the number of $e_{j}$ covering the vertex $v_i$, the maximum redundancy is $\max \{|v_{i}|\ , \forall v_{i}\in V\}$}
+and maximizing \textit{internal cohesion}
+\footnote{Since the hypergraph $H = \{V, E_{h}\}$ is constructed from a weighted graph $G=\{V,E_{g}\}$, each hyperedge $e_{j}\in E_{h}$ will have an associated score $(\lambda_j)$ calculated from the weights of the edges between the vertices within it $(w_{ij}\ge 0, \ \forall(i,j) \in E_{g})$. The score $(\lambda_j)$ therefore represents the internal cohesion of the hyperedge $e_{j}$, so maximizing the internal cohesion of the hyperedge $H$ means to $\max \{\sum_{\forall e_{j}\in E_{h}} \lambda_j \}$}.
+The idea behind the framework is that a hypergraph constructed from a graph should capture the topological relationships between nodes, ensuring that all vertices are covered using the smallest number of hyperedges. To do that in a robust way, the following framework is build to avoid that a node is present in many hyperedges and obtain the best internal correlation between the hyperedges.
+
+\textcolor{blue}{MaCliCo} is based on three sequential operations, the first one is the \textit{extraction of all maximal cliques from the graph} to obtain a collection of subset $\{C_{i}\}_{i=1}^{k}$. The second operation consists in \textit{weighting the subsets} using the weights of the edges of the nodes internal to each subset. The final and third operation is \textit{extract the minimum number of subsets that cover all vertices}, optimizing redundancy and correlation as described before. At the end, each of these optimal subset $C_{j}^{*}$ rappresents the hyperedge of the hypergraph, so the whole set $\{C_{j}^{*}\}_{j=1}^{d}$ where $d<k$, constitutes the hypergraph $(H)$.
+
+\subsection{Maximal Cliques Problem}
+\label{1operation}
+List all the maximal cliques in an undirected graph is a common computational problem in computer science. There are several results, but for this application, \textcolor{blue}{MaCliCo} uses the \textit{Bron–Kerbosch algorithm}. Although no polynomial time algorithm is known for this problem, the Bron–Kerbosch algorithm can be used to list all maximal cliques in worst-case optimal time, and it is also possible to list them in polynomial time per clique. There are multiple implementations of the algorithm, however we will focus on two in particular.
+
+\subsubsection{Bron–Kerbosch algorithm with Pivoting}
+The basic form of the algorithm work recursively on three disjoint sets of vertices $R, P,$ and $X$, it finds the maximal cliques that include all of the vertices in $R$, some of the vertices in $P$, and none of the vertices in $X$. This version is inefficient in the case of graphs with many non-maximal cliques: it makes a recursive call for every clique, maximal or not. To save time and allow the algorithm to backtrack more quickly in branches of the search that contain no maximal cliques, Bron and Kerbosch introduced a variant of the algorithm involving a \textit{pivot vertex} $(v^{*})$ chosen from $P$. Then, neighbors of that pivot element are not recursively tested. Any maximal clique potentially found in tests of neighbors of $v^{*}$ would also be found when testing $v^{*}$ or one of its non-neighbors, as at least one of these will always be a part of that maximal clique. Otherwise, only neighbors of $v^{*}$ would be part of that maximal clique, allowing it to be augmented by adding $v^{*}$ to it, which contradicts that clique being maximal. Therefore, only $v^{*}$ and its non-neighbors need to be tested as the choices for the vertex $v_{i}$ that is added to $R$ in each recursive call to the algorithm.
+\begin{algorithm}
+\caption{Bron–Kerbosch algorithm with Pivoting}
+\label{alg:BK with Pivoting}
+\begin{algorithmic}[1] % [1] abilita la numerazione delle righe
+\Procedure{BronKerboschPivoting}{$R, P, X$}
+    \If{$P$ and $X$ are both empty}
+        \State \Return $R$ as a maximal clique
+    \EndIf
+    \State choose a pivot vertex $v^{*}$ in $P\ \cup\ X$
+    \For {vertex $v_{i}$ in $P\ \setminus\ N(v^{*})$}
+        \State BronKerboschPivoting($R\ \cup\ \{v_{i}\}, P\ \cap\ N(v_{i}), X\ \cap \ N(v_{i})$)
+        \State $P \gets P\ \setminus \{v_{i}\}$
+        \State $X \gets X\ \cup \{v_{i}\}$
+    \EndFor
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+\subsubsection{Bron–Kerbosch algorithm with Vertex Ordering}
+An alternative method for improving the basic form of the Bron–Kerbosch algorithm involves forgoing pivoting at the outermost level of recursion, and instead choosing the ordering of the recursive calls carefully in order to minimize the sizes of the sets $P$ of candidate vertices within each recursive call. The degeneracy of a graph $G$ is the smallest number $d$ such that every subgraph of $G$ has a vertex with degree $d$ or less. Every graph has a degeneracy ordering, an \textit{ordering of the vertices} such that each vertex has d or fewer neighbors that come later in the ordering; a degeneracy ordering may be found in linear time by repeatedly selecting the vertex of minimum degree among the remaining vertices. If the order of the vertices $v_{i}$ that the Bron–Kerbosch algorithm loops through is a degeneracy ordering, then the set $P$ of candidate vertices in each call (the neighbors of $v_{i}$ that are later in the ordering) will be guaranteed to have size at most $d$. The set $X$ of excluded vertices will consist of all earlier neighbors of $v_{i}$, and may be much larger than $d$.
+\begin{algorithm}
+\caption{Bron–Kerbosch algorithm with Vertex Ordering}
+\label{alg:BK with Vertex}
+\begin{algorithmic}[1] % [1] abilita la numerazione delle righe
+\Procedure{BronKerboschVertexOrdering}{$G$}
+    \State $P \gets V(G)$
+    \State $R, X \gets$ empty
+    \For {vertex $v_{i}$ in a \textit{degeneracy ordering} of $G$}
+        \State BronKerboschPivoting($\{v_{i}\}, P\ \cap\ N(v_{i}), X\ \cap \ N(v_{i})$)
+        \State $P \gets P\ \setminus \{v_{i}\}$
+        \State $X \gets X\ \cup \{v_{i}\}$
+    \EndFor
+\EndProcedure
+\end{algorithmic}
+\end{algorithm}
+
+\subsection{Weighting Subsets}
+\label{Model}
+After the first operation \ref{1operation}, we obtain a list of all maximal cliques $MC = \{C_{J}\}_{J=1}^{k}$ extract from the graph $G = \{V, E_{g}\}$, where $C_{J}$ is a clique, so $C_{J}= \{V_{J}, E_{J}\}$ with $V_{J}\subseteq V$ and $E_{J} \subseteq E_{g}$. Since the graph was weighted, $w_{ij} \ge 0\quad \forall (v_i,v_j)\in E_{g}$, for each pair of nodes $(v_{i}, v_{j})\in E_{J}$ of some $C_{J}\in MC$, there is the corrisponding weight $w_{ij}$. So, we using these internal weights to calculate a score $\lambda_{J}$ to rappresent the \textit{internal cohesion} of the each $C_{J}\in MC$.
+\begin{align}
+     & \text{Internal cohesion of each clique} && z_{J} = \dfrac{\sum_{(v_{i}, v_{j})} w_{ij}}{\binom{|V_{J}|}{2}}\qquad \forall (v_{i}, v_{j}) \in E_{J}, \quad\forall C_{J} \in MC\\ \\
+     & \text{Standardization} && \lambda_{J} = \dfrac{z_{J}}{\sum_{j=1}^{k} z_j} \in (0,1)\qquad \forall C_{J} \in MC \\
+     &&&\sum_{j = 1}^{k} \lambda_{j} = 1
+\end{align}
+\subsection{Clique-based Set Cover Problem}
+The final part of \textcolor{blue}{MaCliCo} takes in input the collection of weighted subsets $MC = \{C_{i}\}_{i=1}^{k}$ and the goal is to find the minimum number of weighted subsets that cover all the nodes, minimizing redundancy and maximizing the sum of internal cohesions. This optimization problem is described by the following variant of Set Cover Problem.
+\begin{align}
+  \min_{y_j,\, R}: \quad & \alpha R + \beta \sum_{j=1}^{k} y_j - \gamma \sum_{j=1}^{k} y_j \lambda_j \notag \\[6pt]
+  \text{s.t.} \quad
+    & \sum_{j=1}^{k} a_{ij} y_j \geq 1 && \forall\, v_i \in V \label{c:cov} \\[4pt]
+    & \sum_{j=1}^{k} a_{ij} y_j \leq R && \forall\, v_i \in V \label{c:bound} \\[4pt]
+    & y_j \in \{0,1\}                  && \forall\, j = 1,\ldots,k \label{c:bin_y} \\[4pt]
+    & a_{ij} \in \{0,1\}               && \forall\, i,j \label{c:bin_a} \\[4pt]
+    & R \geq 1\quad \alpha,\beta,\gamma \geq 0 \notag
+\end{align}
+Where the variables are
+\begin{align}
+    & y_{i} =
+    \begin{cases}
+        1, \quad\text{if subset $C_{i}\in MC$ is used}\\
+        0, \quad \text{otherwise}
+    \end{cases}\\
+    &a_{ij} =
+    \begin{cases}
+        1, \quad\text{if node $v_{i}\in C_{j}$}\\
+        0, \quad \text{otherwise}
+    \end{cases} \\
+    &R :\text{ rapresents the maximum redundancy}\\
+    & \alpha, \beta, \gamma : \text{parameters that tune the optimization behavior}
+\end{align}
+
+\subsection{Behavior analysis}
+The model \ref{Model} is represented in a general formulation, but depending on the type of behavior we want it to assume during the optimization process, it is necessary to choose the parameters $\alpha, \beta, \gamma$ appropriately. The behavior depends on the context in which you operate. For example, in some cases you might want:
+\begin{enumerate}
+    \item Optimize the minimization of maximum redundancy
+    \item Then, while maintaining the same redundancy, minimize the number of subsets to activate
+    \item Finally, maximize the consistency between the minimum subsets.
+\end{enumerate}
+This implies that it is necessary to choose $\alpha, \beta, \gamma$ so that the more important term always dominates the maximum possible gain of the less important terms, based on the desired behavior. Given the behavior of the example, the sufficient choice to ensure lexicographical order
+\begin{equation}
+    R \prec \sum_{j=1}^{k} y_{i} \prec \sum_{j=1}^{k} y_{j}\lambda_{j}
+\end{equation}
+is
+\begin{equation}
+    \begin{cases}
+    \beta >  \gamma \sum_{j=1}^{k} \lambda_{j} \\\\
+    \alpha > \beta(m-1) +\gamma\sum_{j=1}^{k} \lambda_{j}
+\end{cases}
+\end{equation}
+where under the normalizzation $\sum_{j=1}^{k}\lambda _{j} = 1$ the easiest choise is
+\begin{equation}
+    \begin{cases}
+        \alpha = 2m \\
+        \beta = 2 \\
+        \gamma = 1
+    \end{cases}
+\end{equation}
+This choice correctly implements the sequence of model optimizations.
+\footnote{Let be $A$ and $B$ two admissible solutions. Focus on $R$, if $R_{A} < R_{B}$ then at least $R_{B}-R_{A}\ge 1$, so in the worst scenario, solution $A$ will be use more clique and have a much lower score. The maximum possible advantage for $B$ is $\beta(m-1) +\gamma\sum_{j=1}^{k} \lambda_{j}$, so if $\alpha > \beta(m-1) +\gamma\sum_{j=1}^{k} \lambda_{j}$ no improvement in cardinality or score can compensate for a worsening of $R$. Therefore, the solver will always choose the minimum value of $R$ first. Then, for the same $R$, if a solution uses one less clique, the minimum advantage in the $\beta\sum_{j=1}^{k}y_{j}$ term is $\beta$. The maximum possible advantage of the other solution in the score is $\gamma\sum_{j=1}^{k}\lambda_{j}$. Therefore, if $\beta > \gamma\sum_{j=1}^{k}\lambda_{j}$ the model will be prefer always less clique, indipendently from the score. Finaly, for the same $R$ and number of activate cliques, it remains only the maximization of $-\gamma\sum_{j=1}^{k}y_{j}\lambda_{j}$.}
+
+An other behavior could be
+\begin{enumerate}
+    \item Minimize first number of activeted subsets
+    \item Then, the minimization of maximum redundancy
+    \item Finally, maximize the consistency between the minimum subsets.
+\end{enumerate}
+The lexicographical order is
+\begin{equation}
+    \sum_{j=1}^{k} y_{i} \prec R \prec \sum_{j=1}^{k} y_{j}\lambda_{j}
+\end{equation}
+the conditions will be
+\begin{equation}
+    \begin{cases}
+    \alpha >  \gamma \sum_{j=1}^{k} \lambda_{j} \\\\
+    \beta > \alpha R_{\text{max}} + \gamma \sum_{j=1}^{k}\lambda_{j}
+\end{cases}
+\end{equation}
+under the normalizzation $\sum_{j=1}^{k}\lambda _{j} = 1$ and the bound $R_{\text{max}} \leq m$ the easiest choise is
+\begin{equation}
+    \begin{cases}
+        \alpha = 2 \\
+        \beta =2m+2 \\
+        \gamma = 1
+    \end{cases}
+\end{equation}
+
+\section{Conclusions}
+In this work I presented \textcolor{blue}{MaCliCo}, an integer linear programming framework that builds a hypergraph from a weighted graph through maximal-clique-based set covering. The method enumerates all maximal cliques with the Bron--Kerbosch algorithm, scores each of them by its normalized internal cohesion, and selects the cliques that cover all vertices while balancing maximum redundancy, number of hyperedges and total cohesion. Also, they have been derived sufficient conditions on the parameters $(\alpha, \beta, \gamma)$ that guarantee a lexicographic priority among these objectives, together with explicit parameter choices for two representative behaviors. Future work will address the experimental evaluation of the framework and the scalability of the clique enumeration step on large graphs.
+\end{document}
