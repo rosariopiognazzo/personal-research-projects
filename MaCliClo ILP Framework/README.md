@@ -1,4 +1,4 @@
-# MACLICO
+# MaCliCo
 
 **Hypergraph Construction via Maximal Clique based Set Covering**
 
@@ -9,11 +9,11 @@ Rosario Pio Gnazzo, Department of Computer Science, University of Salerno
 
 ## Overview
 
-MACLICO is an integer linear programming (ILP) framework that takes a weighted graph $G = (V, E_g)$ as input and returns its generalization as a hypergraph $H = (V, E_h)$. The idea is that a hypergraph built from a graph should capture the topological relationships among nodes, covering all vertices with the smallest possible number of hyperedges. To make the construction robust, the framework prevents a node from appearing in too many hyperedges and favors hyperedges with strong internal correlation.
+MaCliCo is an integer linear programming (ILP) framework that takes a weighted graph $G = (V, E_g)$ as input and returns its generalization as a hypergraph $H = (V, E_h)$. The idea is that a hypergraph built from a graph should capture the topological relationships among nodes, covering all vertices with the smallest possible number of hyperedges. To make the construction robust, the framework prevents a node from appearing in too many hyperedges and favors hyperedges with strong internal correlation.
 
 ## How it works
 
-MACLICO is made of three sequential steps.
+MaCliCo is made of three sequential steps.
 
 1. **Maximal clique enumeration.** All maximal cliques of the graph are extracted with the Bron–Kerbosch algorithm, in two variants: with pivoting and with vertex (degeneracy) ordering. This yields a collection of subsets $\{C_j\}_{j=1}^{k}$.
 
@@ -42,9 +42,6 @@ The parameters $\alpha, \beta, \gamma \ge 0$ control the trade-off between maxim
 | redundancy, then number of hyperedges, then cohesion | $\alpha = 2m,\; \beta = 2,\; \gamma = 1$ |
 | number of hyperedges, then redundancy, then cohesion | $\alpha = 2,\; \beta = 2m + 2,\; \gamma = 1$ |
 
-## Paper
-
-The full description of the framework is in [`MACLICO.pdf`](MACLICO.pdf).
 
 ## Contact
 
